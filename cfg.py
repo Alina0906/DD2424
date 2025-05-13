@@ -9,7 +9,7 @@ class Config:
     num_workers: int = 4
     img_size: int = 224
 
-    model_name: str = "google/vit-large-patch32-384"
+    model_name: str = "google/vit-large-patch16-224"
     num_labels: int = 37
     task: str = "class"
 
