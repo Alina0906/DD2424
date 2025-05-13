@@ -18,7 +18,6 @@ def main():
     
     train_ds = VitDataset(train, transform=transforms, task=config.task)
     eval_ds = VitDataset(test, transform=transforms, task=config.task)
-    print(len(train_ds), len(eval_ds))
 
     training_args = TrainingArguments(
         output_dir="./outputs",
@@ -34,8 +33,6 @@ def main():
         load_best_model_at_end=True,          
         metric_for_best_model="accuracy",
         fp16=torch.cuda.is_available(),
-        no_cuda=True,
-        dataloader_pin_memory=False,
     )
 
     trainer = Trainer(

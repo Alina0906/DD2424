@@ -11,7 +11,7 @@ class Config:
 
     model_name: str = "google/vit-base-patch16-224-in21k"
     num_labels: int = 37
-    task: str = "species"
+    task: str = "class"
 
     lora_rank: int = 8
     lora_alpha: int = 16

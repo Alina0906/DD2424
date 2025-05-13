@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def build_model(config: Config):
     model = ViTForImageClassification.from_pretrained(
         config.model_name,
-        num_labels=config.num_labels if config.task == "species" else 2,
+        num_labels=config.num_labels if config.task == "class" else 2,
         attention_probs_dropout_prob=0.1,
         hidden_dropout_prob=0.1,
     ).to(device)

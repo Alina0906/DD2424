@@ -56,7 +56,7 @@ def vit_transforms(processor):
 
 
 class VitDataset(Dataset):
-    def __init__(self, dataframe, transform=None, task="species"):
+    def __init__(self, dataframe, transform=None, task="class"):
         self.dataframe = dataframe
         self.transform = transform
         self.task = task
