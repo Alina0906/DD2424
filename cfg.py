@@ -5,11 +5,11 @@ from dataclasses import dataclass, field
 class Config:
     data_dir: str = "annotations"
     image_dir: str = "images"
-    batch_size: int = 32
+    batch_size: int = 64
     num_workers: int = 4
     img_size: int = 224
 
-    model_name: str = "google/vit-large-patch16-224"
+    model_name: str = "google/vit-base-patch16-224"
     num_labels: int = 37
     task: str = "class"
 
@@ -19,7 +19,7 @@ class Config:
 
     learning_rate: float = 1e-4
     weight_decay: float = 0.01
-    num_epochs: int = 10
+    num_epochs: int = 20
     warmup_steps: int = 500
     # logging_steps: int = 50
 
