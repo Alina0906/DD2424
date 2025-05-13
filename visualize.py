@@ -78,8 +78,9 @@ def main():
   overlay.paste(attention_img.convert("L"), (0, 0), mask=attention_img)
   blended = Image.alpha_composite(image.convert("RGBA"), overlay)
 
+  output_dir = "outputs/"
   output_path = "attention_overlay.png"
-  blended.convert("RGB").save(output_path)
+  blended.convert("RGB").save(output_dir + output_path)
   print(f"Attention map saved to {output_path}")
 
   original_width, original_height = image.size
@@ -95,7 +96,7 @@ def main():
   plt.title("Attention Map")
   plt.axis('off')
   plt.tight_layout()
-  plt.savefig("side_by_side.png")
+  plt.savefig(output_dir + "side_by_side.png")
   plt.show()
 
   # Heatmap
@@ -104,7 +105,7 @@ def main():
   heatmap = cm.hot(attention_normalized)[:, :, :3]  
   heatmap_img = Image.fromarray((heatmap * 255).astype(np.uint8))
   overlay = Image.blend(image.convert("RGBA"), heatmap_img.convert("RGBA"), alpha=0.4)
-  overlay.save("heatmap_overlay.png")
+  overlay.save(output_dir + "heatmap_overlay.png")
 
 if __name__ == "__main__":
   main()
