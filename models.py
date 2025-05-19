@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch_pruning as tp
 from torch.ao.quantization import quantize_dynamic
 
@@ -34,9 +35,10 @@ def prune_model(model, prune_amount=0.2, img_size=224):
 
 
 def build_model(config, label2id, id2label):   
+    num_labels = config.num_labels if config.task == "class" else 2
     model = ViTForImageClassification.from_pretrained(
         config.model_name,
-        num_labels=config.num_labels if config.task == "class" else 2,
+        num_labels=num_labels,
         attention_probs_dropout_prob=0.1,
         hidden_dropout_prob=0.1,
     ).to(device)
@@ -44,13 +46,15 @@ def build_model(config, label2id, id2label):
     processor = ViTImageProcessor.from_pretrained(config.model_name)
     
     if config.use_lora:
+        # Use peft for Lora
         model = AutoModelForImageClassification.from_pretrained(
             config.model_name,
             label2id=label2id,
             id2label=id2label,
             ignore_mismatched_sizes=True,
         )
-        processor = AutoImageProcessor.from_pretrained(config.model_name)
+
+        model.classifier = nn.Linear(model.config.hidden_size, num_labels)
 
         peft_cfg = LoraConfig(
             r=config.lora_rank,
@@ -61,6 +65,18 @@ def build_model(config, label2id, id2label):
             bias="none",
         )
         model = get_peft_model(model, peft_cfg)
+        processor = AutoImageProcessor.from_pretrained(config.model_name)
+
+        # Customized Lora(Not Sure)
+        # model = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224-in21k")
+        # for param in model.parameters():
+        #     param.requires_grad = False
+        # model.classifier = LoRALinear(model.config.hidden_size, 
+        #                               num_classes=num_labels, 
+        #                               r=config.lora_rank, 
+        #                               alpha=config.lora_alpha)
+        # processor = ViTImageProcessor.from_pretrained(config.model_name)
+
 
     if config.prune_amount > 0:  # need to fix
         model = prune_model(model, prune_amount=config.prune_amount, img_size=config.img_size)
