@@ -7,7 +7,7 @@ from data_generation import load_data, train_test_shuffle, vit_transforms, VitDa
 from models import build_model
 from utils import collate_fn, compute_metrics, parse_args
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     config = parse_args()
     model, processor = build_model(config)
@@ -23,6 +23,7 @@ def main():
 
     training_args = TrainingArguments(
         output_dir="./outputs",
+        remove_unused_columns=True,
         per_device_train_batch_size=config.batch_size,
         per_device_eval_batch_size=config.batch_size,
         num_train_epochs=config.num_epochs,
@@ -44,7 +45,7 @@ def main():
         args=training_args,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
-        tokenizer=None,  
+        tokenizer=processor,  
         compute_metrics=compute_metrics,
         data_collator=collate_fn,
     )

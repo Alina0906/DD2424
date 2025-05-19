@@ -1,4 +1,6 @@
-from transformers import ViTImageProcessor, ViTForImageClassification, Trainer, TrainingArguments
+from transformers import (ViTImageProcessor, ViTForImageClassification, 
+    AutoImageProcessor, AutoModelForImageClassification,
+    Trainer, TrainingArguments)
 import torch
 import torch_pruning as tp
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
@@ -19,17 +21,27 @@ def build_model(config: Config):
     processor = ViTImageProcessor.from_pretrained(config.model_name)
 
     if config.use_lora:
+        model = AutoModelForImageClassification.from_pretrained(
+            config.model_name,
+            #label2id=label2id,
+            #id2label=id2label,
+            ignore_mismatched_sizes=True,  
+        )
+        processor = AutoImageProcessor.from_pretrained(config.model_name)
+
         peft_cfg = LoraConfig(
-            task_type=TaskType.SEQ_CLS,
             r=config.lora_rank,
             lora_alpha=config.lora_alpha,
             target_modules=["query", "value"],
+            modules_to_save=["classifier"],
             inference_mode=False
         )
         model = get_peft_model(model, peft_cfg)
 
     if config.prune_amount > 0:
-        DG = tp.DependencyGraph().build_dependency(model, example_inputs={"pixel_values": torch.randn(1, 3, config.img_size, config.img_size)})
+        DG = tp.DependencyGraph()
+        example_inputs = {"pixel_values": torch.randn(1, 3, config.img_size, config.img_size)}
+        DG.build_dependency(model, example_inputs=example_inputs)
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear) and module.out_features > 100:
                 strategy = tp.strategy.L1Strategy()

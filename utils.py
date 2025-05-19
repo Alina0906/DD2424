@@ -33,8 +33,7 @@ def collate_fn(batch):
     }
 
 
-def compute_metrics(p):
+def compute_metrics(eval_pred):
     metric = load("accuracy")
-    return metric.compute(predictions=np.argmax(p.predictions, axis=1), references=p.label_ids)
-
-
+    predictions = np.argmax(eval_pred.predictions, axis=1)
+    return metric.compute(predictions=predictions, references=eval_pred.label_ids)
