@@ -1,8 +1,10 @@
 import argparse
-from cfg import Config
+
 from evaluate import load
 import numpy as np
 import torch
+
+from cfg import Config
 
 
 def add_arg(parser, field_name, field_def):

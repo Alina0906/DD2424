@@ -1,17 +1,15 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import transformers
 from transformers import TrainingArguments, Trainer
 from data_generation import load_data, train_test_shuffle, vit_transforms, VitDataset
+
 from models import build_model
 from utils import collate_fn, compute_metrics, parse_args
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def main():
     config = parse_args()
-    model, processor = build_model(config)
-    transforms = vit_transforms(processor)
+    transforms = vit_transforms()
     
     train = load_data('trainval')
     test = load_data('test')
@@ -20,6 +18,8 @@ def main():
 
     train_ds = VitDataset(train, transform=transforms, task=config.task)
     eval_ds = VitDataset(test, transform=transforms, task=config.task)
+
+    model, processor = build_model(config, train_ds.label2id, train_ds.id2label)
 
     training_args = TrainingArguments(
         output_dir="./outputs",
@@ -36,6 +36,7 @@ def main():
         save_total_limit=1,
         load_best_model_at_end=True,          
         metric_for_best_model="accuracy",
+        label_names=["labels"],
         greater_is_better=True,
         fp16=torch.cuda.is_available(),
     )

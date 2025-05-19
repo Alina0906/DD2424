@@ -1,14 +1,12 @@
 import os
 import re
 
-import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.model_selection import train_test_split
 
-from datasets import load_dataset
-from torch.utils.data import Dataset, DataLoader
-from torchvision import datasets, transforms
+from torch.utils.data import Dataset
+from torchvision import transforms
 
 
 def load_data(dataset):
@@ -38,19 +36,12 @@ def load_data(dataset):
     return dataframe
 
 
-def get_processor(processor):
-    mean, std, size = processor.image_mean, processor.image_std, processor.size["height"]
-    return mean, std, size
-
-
-def vit_transforms(processor):
-    mean, std, size = get_processor(processor)
-    
+def vit_transforms():  
     vit_transform = transforms.Compose([
-        transforms.RandomResizedCrop(size),
+        transforms.RandomResizedCrop((224, 224)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize(mean, std),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     return vit_transform
@@ -72,6 +63,15 @@ class VitDataset(Dataset):
         self.dataframe = dataframe
         self.transform = transform
         self.task = task
+        self.labels = []
+
+        if self.task == "species":
+            self.labels = self.dataframe["SPECIES"].unique().tolist()
+        else:
+            self.labels = self.dataframe["CLASS_ID"].unique().tolist()
+
+        self.label2id = {label: idx for idx, label in enumerate(self.labels)}
+        self.id2label = {idx: label for idx, label in enumerate(self.labels)}
 
     def __len__(self):
         return len(self.dataframe)
@@ -87,7 +87,9 @@ class VitDataset(Dataset):
             label = row["SPECIES"]
         else:
             label = row["CLASS_ID"]
-            
+        
+        label_id = self.label2id.get(label, 0)
+        
         return {
             "pixel_values": image,
             "labels": label

@@ -1,16 +1,39 @@
-from transformers import (ViTImageProcessor, ViTForImageClassification, 
-    AutoImageProcessor, AutoModelForImageClassification,
-    Trainer, TrainingArguments)
 import torch
 import torch_pruning as tp
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
+from torch.ao.quantization import quantize_dynamic
+
+from transformers import (ViTImageProcessor, ViTForImageClassification, 
+    AutoImageProcessor, AutoModelForImageClassification)
+from peft import get_peft_model, LoraConfig
 
 from cfg import Config
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def build_model(config: Config):
+
+def prune_model(model, prune_amount=0.2, img_size=224):
+    strategy = tp.strategy.L1Strategy()  
+    pruning_targets = []
+    for name, module in model.named_modules():
+        if "attention.attention.query" in name or "attention.attention.value" in name:
+            if isinstance(module, torch.nn.Linear):
+                pruning_targets.append(module)
+
+    example_inputs = {"pixel_values": torch.randn(1, 3, img_size, img_size)}
+    DG = tp.DependencyGraph()
+    DG.build_dependency(model, example_inputs=example_inputs)
+
+    for module in pruning_targets:
+        n_keep = int(module.out_features * (1 - prune_amount))
+        prune_indices = strategy(module.weight, n_keep=n_keep)
+        plan = DG.get_pruning_plan(module, tp.prune_linear, indices=prune_indices)
+        plan.exec()
+
+    return model
+
+
+def build_model(config, label2id, id2label):   
     model = ViTForImageClassification.from_pretrained(
         config.model_name,
         num_labels=config.num_labels if config.task == "class" else 2,
@@ -19,38 +42,34 @@ def build_model(config: Config):
     ).to(device)
 
     processor = ViTImageProcessor.from_pretrained(config.model_name)
-
+    
     if config.use_lora:
         model = AutoModelForImageClassification.from_pretrained(
             config.model_name,
-            #label2id=label2id,
-            #id2label=id2label,
-            ignore_mismatched_sizes=True,  
+            label2id=label2id,
+            id2label=id2label,
+            ignore_mismatched_sizes=True,
         )
         processor = AutoImageProcessor.from_pretrained(config.model_name)
 
         peft_cfg = LoraConfig(
             r=config.lora_rank,
             lora_alpha=config.lora_alpha,
+            lora_dropout=config.lora_dropout,
             target_modules=["query", "value"],
             modules_to_save=["classifier"],
-            inference_mode=False
+            bias="none",
         )
         model = get_peft_model(model, peft_cfg)
 
-    if config.prune_amount > 0:
-        DG = tp.DependencyGraph()
-        example_inputs = {"pixel_values": torch.randn(1, 3, config.img_size, config.img_size)}
-        DG.build_dependency(model, example_inputs=example_inputs)
-        for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Linear) and module.out_features > 100:
-                strategy = tp.strategy.L1Strategy()
-                prune_index = strategy(module.weight, amount=config.prune_amount)
-                DG.prune_linear(module, prune_index)
-
+    if config.prune_amount > 0:  # need to fix
+        model = prune_model(model, prune_amount=config.prune_amount, img_size=config.img_size)
+        
     if config.quantize:
-        model = torch.quantization.quantize_dynamic(
-            model, {torch.nn.Linear}, dtype=torch.qint8
+        model = quantize_dynamic(
+            model.cpu(),
+            {torch.nn.Linear},
+            dtype=torch.qint8
         )
-    
+
     return model, processor

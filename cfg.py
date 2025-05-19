@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
 
 @dataclass
 class Config:
@@ -15,6 +14,7 @@ class Config:
 
     lora_rank: int = 8
     lora_alpha: int = 16
+    lora_dropout: float = 0.1
     use_lora: bool = False
 
     learning_rate: float = 1e-4
