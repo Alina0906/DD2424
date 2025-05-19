@@ -1,7 +1,7 @@
 <h1 align="center"> Project for DD2424: Transfer Learning </h1>
 
 <p align="center">
-    <img src="main.png" height=200"> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+    <img src="main.png" height=500"> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
 </p>
 
 ## TODO
