@@ -4,6 +4,7 @@ import re
 import numpy as np
 import pandas as pd
 from PIL import Image
+from sklearn.model_selection import train_test_split
 
 from datasets import load_dataset
 from torch.utils.data import Dataset, DataLoader
@@ -53,6 +54,17 @@ def vit_transforms(processor):
     ])
 
     return vit_transform
+
+
+def train_test_shuffle(train, test):
+  combined = pd.concat([train, test], ignore_index=True)
+  shuffled = combined.sample(frac=1, random_state=42).reset_index(drop=True)
+
+  new_train, new_test = train_test_split(
+    shuffled, test_size=0.2, shuffle=True, random_state=42
+  )
+  
+  return new_train, new_test
 
 
 class VitDataset(Dataset):
