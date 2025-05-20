@@ -76,8 +76,14 @@ class PruningTrainer(Trainer):
         if state.epoch % prune_config["prune_epoch_interval"] == 0:
             if self.current_step < prune_config["total_prune_steps"]:
                 # Attention Map Before Pruning
+                sample = self.train_dataset[0]
+                input_tensor = sample['pixel_values']
+                
+                if input_tensor.dim() == 3:
+                    input_tensor = input_tensor.unsqueeze(0)
+                    
                 with torch.no_grad():
-                    outputs = self.model(torch.randn(1, 3, 224, 224).to(self.args.device))
+                    outputs = self.model(input_tensor.to(self.args.device))
                     self.attention_maps["original"].append(outputs.attentions[0][0].mean(0)[0])
                     
                 # Conduct Pruning
@@ -86,7 +92,7 @@ class PruningTrainer(Trainer):
                 
                 # Attention Map After Pruning
                 with torch.no_grad():
-                    outputs = self.model(torch.randn(1, 3, 224, 224).to(self.args.device))
+                    outputs = self.model(input_tensor.to(self.args.device))
                     self.attention_maps["pruned"].append(outputs.attentions[0][0].mean(0)[0])
                     
                 # Visualization
