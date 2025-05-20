@@ -1,14 +1,29 @@
-import torch
-import torch.nn.utils.prune as prune
-from transformers import ViTForImageClassification, Trainer, TrainingArguments
-from datasets import load_dataset
 import numpy as np
 import matplotlib.pyplot as plt
+
+import torch
 from torch.nn.functional import normalize
+import torch.nn.utils.prune as prune
+import transformers
+from transformers import ViTForImageClassification, Trainer, TrainingArguments
+
+from data_generation import load_data, train_test_shuffle, vit_transforms, VitDataset
+from models import build_model
+from utils import collate_fn, compute_metrics, parse_args
 
 
-dataset = load_dataset("cifar10")
-model = ViTForImageClassification.from_pretrained("google/vit-large-patch16-224-in21k", num_labels=10)
+config = parse_args()
+
+transforms = vit_transforms()
+train = load_data('trainval')
+test = load_data('test')
+
+train, test = train_test_shuffle(train, test)
+
+train_ds = VitDataset(train, transform=transforms, task=config.task)
+eval_ds = VitDataset(test, transform=transforms, task=config.task)
+
+model, processor = build_model(config, train_ds.label2id, train_ds.id2label)
 
 prune_config = {
     "prune_layers": [
@@ -85,24 +100,35 @@ class PruningTrainer(Trainer):
 
 training_args = TrainingArguments(
     output_dir="./vit-pruned",
-    per_device_train_batch_size=16,
-    eval_strategy="epoch",
+    remove_unused_columns=True,
+    per_device_train_batch_size=config.batch_size,
+    per_device_eval_batch_size=config.batch_size,
     num_train_epochs=prune_config["total_prune_steps"] * prune_config["prune_epoch_interval"] + 2,
+    learning_rate=config.learning_rate,
+    weight_decay=config.weight_decay,
+    warmup_steps=config.warmup_steps,
+    logging_strategy="epoch",
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    save_total_limit=1,
+    load_best_model_at_end=True,          
+    metric_for_best_model="accuracy",
+    label_names=["labels"],
+    greater_is_better=True,
+    fp16=torch.cuda.is_available(),
+    eval_strategy="epoch",
     logging_dir="./logs",
 )
 
-def preprocess(examples):
-    examples["pixel_values"] = [image.convert("RGB").resize((224, 224)) for image in examples["img"]]
-    return examples
-
-dataset = dataset.map(preprocess, batched=True)
-dataset.set_format(type="torch", columns=["pixel_values", "label"])
 
 trainer = PruningTrainer(
     model=model,
     args=training_args,
-    train_dataset=dataset["train"],
-    eval_dataset=dataset["test"],
+    train_dataset=train_ds,
+    eval_dataset=eval_ds,
+    tokenizer=processor,  
+    compute_metrics=compute_metrics,
+    data_collator=collate_fn,
 )
 
 trainer.train()
