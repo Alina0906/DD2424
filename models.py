@@ -49,7 +49,7 @@ def build_model(config, label2id, id2label):
     
     model = AutoModelForImageClassification.from_pretrained(
             config.model_name,
-            num_labels=config.num_labels if config.task == "class" else 2
+            num_labels=config.num_labels if config.task == "class" else 2,
             label2id=label2id,
             id2label=id2label,
             ignore_mismatched_sizes=True,
