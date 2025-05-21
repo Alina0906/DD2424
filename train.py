@@ -9,7 +9,7 @@ from utils import collate_fn, compute_metrics, parse_args
 
 def main():
     config = parse_args()
-    transforms = vit_transforms()
+    transforms = vit_transforms(cfg)
     
     train = load_data('trainval')
     test = load_data('test')
