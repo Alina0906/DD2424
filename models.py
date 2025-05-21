@@ -34,7 +34,8 @@ def prune_model(model, prune_amount=0.2, img_size=224):
     return model
 
 
-def build_model(config, label2id, id2label):   
+def build_model(config, label2id, id2label):  
+    """
     num_labels = config.num_labels if config.task == "class" else 2
     model = ViTForImageClassification.from_pretrained(
         config.model_name,
@@ -44,18 +45,21 @@ def build_model(config, label2id, id2label):
     ).to(device)
 
     processor = ViTImageProcessor.from_pretrained(config.model_name)
+    """
     
-    if config.use_lora:
-        # Use peft for Lora
-        model = AutoModelForImageClassification.from_pretrained(
+    model = AutoModelForImageClassification.from_pretrained(
             config.model_name,
+            num_labels=config.num_labels if config.task == "class" else 2
             label2id=label2id,
             id2label=id2label,
             ignore_mismatched_sizes=True,
-        )
+            attention_probs_dropout_prob=0.1,
+            hidden_dropout_prob=0.1,
+    ).to(device)
 
-        model.classifier = nn.Linear(model.config.hidden_size, num_labels)
-
+    processor = AutoImageProcessor.from_pretrained(config.model_name)
+    
+    if config.use_lora:
         peft_cfg = LoraConfig(
             r=config.lora_rank,
             lora_alpha=config.lora_alpha,
@@ -65,18 +69,6 @@ def build_model(config, label2id, id2label):
             bias="none",
         )
         model = get_peft_model(model, peft_cfg)
-        processor = AutoImageProcessor.from_pretrained(config.model_name)
-
-        # Customized Lora(Not Sure)
-        # model = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224-in21k")
-        # for param in model.parameters():
-        #     param.requires_grad = False
-        # model.classifier = LoRALinear(model.config.hidden_size, 
-        #                               num_classes=num_labels, 
-        #                               r=config.lora_rank, 
-        #                               alpha=config.lora_alpha)
-        # processor = ViTImageProcessor.from_pretrained(config.model_name)
-
 
     if config.prune_amount > 0:  # need to fix
         model = prune_model(model, prune_amount=config.prune_amount, img_size=config.img_size)
