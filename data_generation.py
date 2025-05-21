@@ -37,9 +37,9 @@ def load_data(dataset):
     return dataframe
 
 
-def vit_transforms():  
+def vit_transforms(cfg):  
     vit_transform = transforms.Compose([
-        transforms.RandomResizedCrop((224, 224)),
+        transforms.RandomResizedCrop((cfg.img_size, cfg.img_size)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
