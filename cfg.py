@@ -6,9 +6,9 @@ class Config:
     image_dir: str = "images"
     batch_size: int = 32
     num_workers: int = 4
-    img_size: int = 224
+    img_size: int = 192   # 224
 
-    model_name: str = "google/vit-large-patch16-224-in21k"
+    model_name: str = "microsoft/swinv2-large-patch4-window12-192-22k"       # "google/vit-large-patch16-224-in21k"
     num_labels: int = 37
     task: str = "class"
 
